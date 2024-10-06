@@ -1,104 +1,73 @@
-#include<bits/stdc++.h>
+#include <iostream>
+#include <vector>
+#include <string>
+#include <unordered_set>
+
 using namespace std;
-#define n 10
 
-bool isValidVertical(vector<string>& grid, int row, int col, string word){
-    int j = row;
-    for(int i=0;i<word.size();i++){
-        if(j>9){
-            return false;
+#define SIZE 10
+
+bool canPlaceWord(const vector<string>& grid, int row, int col, const string& word, bool isVertical) {
+    int len = word.size();
+    if (isVertical) {
+        if (row + len > SIZE) return false;
+        for (int i = 0; i < len; ++i) {
+            if (grid[row + i][col] != '-' && grid[row + i][col] != word[i])
+                return false; // Conflict
         }
-        if(grid[i+row][col] == '-' || grid[i+row][col] == word[i]){
-            j++;
-        }
-        if(grid[i+row][col] == '+' || (grid[i+row][col] != '-' && grid[i+row][col] != word[i])){
-            return false;
+    } else {
+        if (col + len > SIZE) return false;
+        for (int i = 0; i < len; ++i) {
+            if (grid[row][col + i] != '-' && grid[row][col + i] != word[i])
+                return false; // Conflict
         }
     }
     return true;
 }
 
-bool isValidHorizontal(vector<string>& grid, int row, int col, string word){
-    int j = col;
-    for(int i=0;i<word.size();i++){
-        if(j>9){
-            return false;
-        }
-        if(grid[row][col+i] == '-' || grid[row][col+i] == word[i]){
-            j++;
-        }
-        if(grid[row][col+i] == '+' || (grid[row][col+i] != '-' && grid[row][col+i] != word[i])){
-            return false;
-        }
-    }
-    return true;
-}
-
-void setVertical(vector<string>& grid, int row, int col, string word, vector<bool>& arr){
-    for(int i=0;i<word.size();i++){
-        if(grid[row+i][col] == '-'){
-            grid[row+i][col] = word[i];
-            arr.push_back(true);
-        }
-        else{
-            arr.push_back(false);
+void placeWord(vector<string>& grid, int row, int col, const string& word, bool isVertical) {
+    int len = word.size();
+    for (int i = 0; i < len; ++i) {
+        if (isVertical) {
+            grid[row + i][col] = word[i];
+        } else {
+            grid[row][col + i] = word[i];
         }
     }
 }
 
-void setHorizontal(vector<string>& grid, int row, int col, string word, vector<bool>& arr){
-    for(int i=0;i<word.size();i++){
-        if(grid[row][col+i] == '-'){
-            grid[row][col+i] = word[i];
-            arr.push_back(true); 
-        }
-        else{
-            arr.push_back(false);
-        }
-    }
-}
-
-void resetVertical(vector<string>& grid, int row, int col, string word, vector<bool>& arr){
-    for(int i=0;i<word.size();i++){
-        if(arr[i]){
-            grid[row+i][col] = '-';
+void removeWord(vector<string>& grid, int row, int col, const string& word, bool isVertical) {
+    int len = word.size();
+    for (int i = 0; i < len; ++i) {
+        if (isVertical) {
+            grid[row + i][col] = '-';
+        } else {
+            grid[row][col + i] = '-';
         }
     }
 }
 
-void resetHorizontal(vector<string>& grid, int row, int col, string word, vector<bool>& arr){
-    for(int i=0;i<word.size();i++){
-        if(arr[i]){
-            grid[row][col+i] = '-';
-        }
-    }
-}
-
-bool crosswordSolver(vector<string>& grid, vector<string>v, int index){
-    if(index == v.size()){
-        for(int i=0;i<n;i++){
-            cout <<grid.at(i) <<endl;
+bool crosswordSolver(vector<string>& grid, unordered_set<string>& wordsSet, int index) {
+    if (index == wordsSet.size()) {
+        for (const auto& line : grid) {
+            cout << line << endl;
         }
         return true;
     }
-    for(int i=0;i<n;i++){
-        for(int j=0;j<n;j++){
-            if(grid[i][j] == '-' || grid[i][j] == v[index][0]){
-                if(isValidVertical(grid, i, j, v[index])){  // checks if the given word is valid to be filled vertically at given i,j
-                    vector<bool>arr;     //Array to keep check where '-' is present, to help in resetting
-                    setVertical(grid, i, j, v[index], arr);
-                    if(crosswordSolver(grid, v, index+1)){
-                        return true;
-                    }
-                    resetVertical(grid, i, j, v[index], arr);  // resets them to '-', if other words don't fit in (backtracking) 
+
+    string word = *next(wordsSet.begin(), index);
+    for (int i = 0; i < SIZE; ++i) {
+        for (int j = 0; j < SIZE; ++j) {
+            if (grid[i][j] == '-' || grid[i][j] == word[0]) {
+                if (canPlaceWord(grid, i, j, word, true)) {
+                    placeWord(grid, i, j, word, true);
+                    if (crosswordSolver(grid, wordsSet, index + 1)) return true;
+                    removeWord(grid, i, j, word, true);
                 }
-                if(isValidHorizontal(grid, i, j, v[index])){   //checks if the given word is valid to be filled horizontally at given i,j
-                    vector<bool> arr;
-                    setHorizontal(grid, i, j, v[index], arr);
-                    if(crosswordSolver(grid, v, index+1)){
-                        return true;
-                    }
-                    resetHorizontal(grid, i, j, v[index], arr);
+                if (canPlaceWord(grid, i, j, word, false)) {
+                    placeWord(grid, i, j, word, false);
+                    if (crosswordSolver(grid, wordsSet, index + 1)) return true;
+                    removeWord(grid, i, j, word, false);
                 }
             }
         }
@@ -107,24 +76,21 @@ bool crosswordSolver(vector<string>& grid, vector<string>v, int index){
 }
 
 int main() {
-    vector<string>grid;
-    for(int i=0;i<n;i++){
-        string line;
-        cin >>line;
-        grid.push_back(line);
+    vector<string> grid(SIZE);
+    for (int i = 0; i < SIZE; ++i) {
+        cin >> grid[i];
     }
-    string s;
-    cin >>s;
-    int i=0;
-    vector<string> words;
-    while(i<s.size()){
-        string tmp;
-        while(s[i]!=';' && i<s.size()){
-            tmp+=s[i];
-            i++;
-        }
-        words.push_back(tmp);
-        i++;
+
+    string input;
+    cin >> input;
+    unordered_set<string> wordsSet;
+    size_t pos = 0;
+    while ((pos = input.find(';')) != string::npos) {
+        wordsSet.insert(input.substr(0, pos));
+        input.erase(0, pos + 1);
     }
-    crosswordSolver(grid, words, 0);
+    wordsSet.insert(input); // Add last word
+
+    crosswordSolver(grid, wordsSet, 0);
+    return 0;
 }
